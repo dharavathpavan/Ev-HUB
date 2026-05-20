@@ -1,0 +1,53 @@
+# Node / Next.js
+node_modules/
+.next/
+out/
+dist/
+.DS_Store
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Next.js built files
+build/
+.cache/
+
+# TypeScript
+*.tsbuildinfo
+
+# Environment
+.env
+.env.*
+
+# Flutter / Dart
+.flutter-plugins
+.packages
+.pub-cache/
+.pub/
+build/
+.ios/
+.android/
+.flutter-plugins-dependencies
+.flutter-plugins
+.flutter-plugins-dependencies
+.flutter-version
+.idea/
+*.iml
+
+# VS Code
+.vscode/
+
+# macOS
+*.DS_Store
+
+# Windows
+Thumbs.db
+
+# Logs
+logs/
+*.log
+
+# Ignore generated files
+**/build_old/
+**/build/

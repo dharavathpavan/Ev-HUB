@@ -1,0 +1,107 @@
+{
+  "vendor_applications": [
+    {
+      "business_name": "Supercharged CPO Ltd",
+      "contact_email": "cpo@supercharged.com",
+      "tax_id": "TAX-SC-1002",
+      "utility_bill_url": "",
+      "estimated_chargers": 20,
+      "id": "app-3ynn502",
+      "status": "Approved",
+      "created_at": "2026-05-20T08:55:44.917Z",
+      "updated_at": "2026-05-20T08:56:13.305Z",
+      "admin_notes": "Approved for vendor workflow."
+    },
+    {
+      "id": "app-chargepoint-1",
+      "business_name": "ChargePoint India Inc.",
+      "contact_email": "info@chargepoint.in",
+      "tax_id": "TAX-CP-9922",
+      "estimated_chargers": 15,
+      "status": "Pending",
+      "created_at": "2026-05-20T06:55:03.470Z",
+      "updated_at": "2026-05-20T06:55:03.470Z"
+    },
+    {
+      "id": "app-voltspark-2",
+      "business_name": "VoltSpark EV Solutions",
+      "contact_email": "partner@voltspark.com",
+      "tax_id": "TAX-VS-8811",
+      "estimated_chargers": 8,
+      "status": "Approved",
+      "created_at": "2026-05-17T08:55:03.470Z",
+      "updated_at": "2026-05-18T08:55:03.470Z"
+    },
+    {
+      "id": "app-ecodrive-3",
+      "business_name": "EcoDrive Hubs",
+      "contact_email": "deploy@ecodrive.org",
+      "tax_id": "TAX-ED-7744",
+      "estimated_chargers": 25,
+      "status": "Pending",
+      "created_at": "2026-05-20T07:55:03.470Z",
+      "updated_at": "2026-05-20T08:55:03.470Z"
+    }
+  ],
+  "vendor_profiles": [
+    {
+      "id": "profile-epp7xxi",
+      "vendor_id": "vendor-lxv97b3",
+      "business_name": "Supercharged CPO Ltd",
+      "brand_color_primary": "#4ADDA2",
+      "commission_rate": 10,
+      "status": "Active",
+      "created_at": "2026-05-20T08:56:13.305Z"
+    },
+    {
+      "id": "profile-voltspark",
+      "vendor_id": "vendor-voltspark",
+      "business_name": "VoltSpark EV Solutions",
+      "payout_bank_details": {
+        "bank_name": "State Bank of India",
+        "account_no": "XXXXXXXX1234",
+        "ifsc": "SBIN0001234"
+      },
+      "brand_color_primary": "#4ADDA2",
+      "commission_rate": 8.5,
+      "status": "Active",
+      "created_at": "2026-05-18T08:55:03.470Z"
+    }
+  ],
+  "charging_guns": [
+    {
+      "id": "gun-chga1-1",
+      "charger_id": "CHG-A1",
+      "gun_index": 1,
+      "connector_type": "CCS2",
+      "max_kw_output": 150,
+      "status": "Available",
+      "updated_at": "2026-05-20T08:59:58.946Z"
+    },
+    {
+      "id": "gun-chga1-2",
+      "charger_id": "CHG-A1",
+      "gun_index": 2,
+      "connector_type": "Type2",
+      "max_kw_output": 22,
+      "status": "Available",
+      "updated_at": "2026-05-20T08:59:58.947Z"
+    }
+  ],
+  "qr_mappings": [
+    {
+      "qr_id": "QR-CHG-A1-G1",
+      "charger_id": "CHG-A1",
+      "gun_index": 1,
+      "short_url": "https://app.bleuright.com/charge?qr=QR-CHG-A1-G1",
+      "created_at": "2026-05-20T08:55:03.470Z"
+    },
+    {
+      "qr_id": "QR-CHG-A1-G2",
+      "charger_id": "CHG-A1",
+      "gun_index": 2,
+      "short_url": "https://app.bleuright.com/charge?qr=QR-CHG-A1-G2",
+      "created_at": "2026-05-20T08:55:03.470Z"
+    }
+  ]
+}
