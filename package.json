@@ -1,0 +1,9 @@
+{
+  "name": "ev-hub-monorepo",
+  "private": true,
+  "scripts": {
+    "build": "npm --prefix cms_backend run build",
+    "dev": "npm --prefix cms_backend run dev",
+    "start": "npm --prefix cms_backend run start"
+  }
+}
