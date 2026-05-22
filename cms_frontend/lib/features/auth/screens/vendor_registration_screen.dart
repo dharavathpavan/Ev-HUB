@@ -1,10 +1,13 @@
 import 'package:flutter/material.dart';
+import 'dart:convert';
 import 'dart:ui';
 import 'dart:math' as math;
 import 'package:go_router/go_router.dart';
+import 'package:http/http.dart' as http;
 
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import 'package:cms_frontend/config.dart';
 import '../widgets/glass_text_field.dart';
 import '../widgets/animated_card_border.dart';
 
@@ -20,6 +23,9 @@ class _VendorRegistrationScreenState extends State<VendorRegistrationScreen> wit
   final TextEditingController _businessNameController = TextEditingController();
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
+  final TextEditingController _taxIdController = TextEditingController();
+  final TextEditingController _addressController = TextEditingController();
+  final TextEditingController _phoneController = TextEditingController();
   bool _isLoading = false;
 
   // 3D Card Physics
@@ -41,6 +47,9 @@ class _VendorRegistrationScreenState extends State<VendorRegistrationScreen> wit
     _businessNameController.dispose();
     _emailController.dispose();
     _passwordController.dispose();
+    _taxIdController.dispose();
+    _addressController.dispose();
+    _phoneController.dispose();
     super.dispose();
   }
 
@@ -48,8 +57,11 @@ class _VendorRegistrationScreenState extends State<VendorRegistrationScreen> wit
     final businessName = _businessNameController.text.trim();
     final email = _emailController.text.trim();
     final password = _passwordController.text;
+    final taxId = _taxIdController.text.trim();
+    final companyAddress = _addressController.text.trim();
+    final phone = _phoneController.text.trim();
 
-    if (businessName.isEmpty || email.isEmpty || password.isEmpty) {
+    if (businessName.isEmpty || email.isEmpty || password.isEmpty || companyAddress.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Please fill out all fields.'), backgroundColor: Colors.redAccent),
       );
@@ -59,18 +71,61 @@ class _VendorRegistrationScreenState extends State<VendorRegistrationScreen> wit
     setState(() => _isLoading = true);
 
     try {
-      await Supabase.instance.client.auth.signUp(
+      final result = await Supabase.instance.client.auth.signUp(
         email: email,
         password: password,
         data: {
           'business_name': businessName,
           'role': 'vendor',
-        }
+        },
       );
+
+      if (result.user == null) {
+        throw const AuthException('Vendor signup failed. Please try again.');
+      }
+
+      // Synchronize application with local Next.js DB. Wrap in sub-try/catch so that if Next.js backend
+      // is not running/accessible, registration still completes (since Supabase auth succeeded).
+      try {
+        await http.post(
+          Uri.parse('${Config.apiBaseUrl}/api/vendors/apply'),
+          headers: {'Content-Type': 'application/json'},
+          body: jsonEncode({
+            'business_name': businessName,
+            'contact_email': email,
+            'tax_id': taxId,
+            'company_address': companyAddress,
+            'phone_number': phone,
+            'utility_bill_url': '',
+            'estimated_chargers': 0
+          }),
+        ).timeout(const Duration(seconds: 5));
+      } catch (e) {
+        debugPrint('Warning: Local application database synchronization failed: $e');
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Note: Server database sync pending ($e). Account created successfully!'),
+              backgroundColor: Colors.orangeAccent,
+              duration: const Duration(seconds: 4),
+            ),
+          );
+        }
+      }
       
       if (mounted) {
         setState(() => _isLoading = false);
-        context.go('/verify?email=$email');
+        if (result.session != null) {
+          context.go('/vendor-dashboard');
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Account created. Please sign in to open your vendor dashboard.'),
+              backgroundColor: Color(0xFF4ADDA2),
+            ),
+          );
+          context.go('/login');
+        }
       }
     } on AuthException catch (e) {
       if (mounted) {
@@ -83,7 +138,7 @@ class _VendorRegistrationScreenState extends State<VendorRegistrationScreen> wit
       if (mounted) {
         setState(() => _isLoading = false);
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('An unexpected error occurred.'), backgroundColor: Colors.redAccent),
+          SnackBar(content: Text('An unexpected error occurred: $e'), backgroundColor: Colors.redAccent),
         );
       }
     }
@@ -260,7 +315,24 @@ class _VendorRegistrationScreenState extends State<VendorRegistrationScreen> wit
                                 isPassword: true,
                                 controller: _passwordController,
                               ),
-                              
+                              const SizedBox(height: 16),
+                              GlassTextField(
+                                hintText: 'Tax ID / GSTIN',
+                                prefixIcon: Icons.receipt_long_outlined,
+                                controller: _taxIdController,
+                              ),
+                              const SizedBox(height: 16),
+                              GlassTextField(
+                                hintText: 'Company Address',
+                                prefixIcon: Icons.location_on_outlined,
+                                controller: _addressController,
+                              ),
+                              const SizedBox(height: 16),
+                              GlassTextField(
+                                hintText: 'Phone Number',
+                                prefixIcon: Icons.phone_outlined,
+                                controller: _phoneController,
+                              ),
                               const SizedBox(height: 32),
                               
                               // Register Button

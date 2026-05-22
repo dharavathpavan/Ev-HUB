@@ -1,92 +1,112 @@
 import 'package:flutter/material.dart';
 
-class VendorStationsScreen extends StatelessWidget {
+import '../vendor_ops_service.dart';
+import '../widgets/vendor_ops_widgets.dart';
+
+class VendorStationsScreen extends StatefulWidget {
   const VendorStationsScreen({super.key});
 
   @override
+  State<VendorStationsScreen> createState() => _VendorStationsScreenState();
+}
+
+class _VendorStationsScreenState extends State<VendorStationsScreen> {
+  late Future<Map<String, dynamic>> _future;
+
+  @override
+  void initState() {
+    super.initState();
+    _future = VendorOpsService.fetchOperations();
+  }
+
+  void _refresh() => setState(() => _future = VendorOpsService.fetchOperations());
+
+  Future<void> _addCharger() async {
+    final stamp = DateTime.now().millisecondsSinceEpoch.toString().substring(8);
+    final result = await VendorOpsService.addCharger(
+      stationName: 'New Vendor Hub $stamp',
+      location: 'New Location',
+      chargerId: 'CHG-$stamp',
+      ocppId: 'OCPP-CHG-$stamp',
+      maxKw: 60,
+    );
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(result['success'] == true ? 'Charger added and QR mapping prepared.' : 'Unable to add charger'), backgroundColor: result['success'] == true ? vendorMint : Colors.redAccent));
+    _refresh();
+  }
+
+  Future<void> _configure(Map<String, dynamic> charger) async {
+    final result = await VendorOpsService.configureCharger(
+      chargerId: charger['charger_id'],
+      connectorType: 'CCS2',
+      gunIndex: 1,
+      rateCardId: 'rate-standard',
+      maxKw: double.tryParse(charger['max_kw_output']?.toString() ?? '60') ?? 60,
+      razorpayQrId: charger['razorpay_qr_id'] ?? 'rzp_qr_${charger['charger_id']}_g1',
+    );
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(result['success'] == true ? 'Connector, rate card, OCPP ID and QR saved.' : result['error']?.toString() ?? 'Configure failed'), backgroundColor: result['success'] == true ? vendorMint : Colors.redAccent));
+    _refresh();
+  }
+
+  @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.all(40.0),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+    return FutureBuilder<Map<String, dynamic>>(
+      future: _future,
+      builder: (context, snapshot) {
+        final chargers = List<Map<String, dynamic>>.from(snapshot.data?['chargers'] ?? []);
+
+        return Padding(
+          padding: const EdgeInsets.all(32),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text('Stations & Chargers', style: TextStyle(fontSize: 32, fontWeight: FontWeight.bold, color: Colors.white)),
-                  SizedBox(height: 8),
-                  Text('Manage your charging locations and individual guns', style: TextStyle(color: Color(0xFF8A8A8A))),
-                ],
+              VendorPageHeader(
+                title: 'Stations & Chargers',
+                subtitle: 'Add charger cabinets, configure connector guns, assign rate cards, and generate Razorpay QR IDs.',
+                action: ElevatedButton.icon(
+                  onPressed: _addCharger,
+                  icon: const Icon(Icons.add, color: Colors.black),
+                  label: const Text('Add Charger', style: TextStyle(color: Colors.black, fontWeight: FontWeight.w700)),
+                  style: ElevatedButton.styleFrom(backgroundColor: vendorMint, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8))),
+                ),
               ),
-              ElevatedButton.icon(
-                onPressed: () {},
-                icon: const Icon(Icons.add, color: Colors.black, size: 18),
-                label: const Text('Add Station', style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold)),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF4ADDA2),
-                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
+              const SizedBox(height: 24),
+              Expanded(
+                child: VendorSectionCard(
+                  child: SingleChildScrollView(
+                    scrollDirection: Axis.horizontal,
+                    child: DataTable(
+                      headingTextStyle: const TextStyle(color: vendorMuted, fontWeight: FontWeight.w800),
+                      dataTextStyle: const TextStyle(color: Colors.white),
+                      columns: const [
+                        DataColumn(label: Text('STATION')),
+                        DataColumn(label: Text('CHARGER')),
+                        DataColumn(label: Text('OCPP ID')),
+                        DataColumn(label: Text('RATE CARD')),
+                        DataColumn(label: Text('RAZORPAY QR')),
+                        DataColumn(label: Text('STATUS')),
+                        DataColumn(label: Text('ACTION')),
+                      ],
+                      rows: chargers.map((charger) {
+                        return DataRow(cells: [
+                          DataCell(Text(charger['station_name'] ?? '-')),
+                          DataCell(Text('${charger['charger_id']} / ${charger['max_kw_output']} kW', style: const TextStyle(fontWeight: FontWeight.w800))),
+                          DataCell(Text(charger['ocpp_charge_point_id'] ?? '-')),
+                          DataCell(Text(charger['rate_card_id'] ?? '-')),
+                          DataCell(Text(charger['razorpay_qr_id'] ?? '-', overflow: TextOverflow.ellipsis)),
+                          DataCell(VendorStatusPill(status: charger['status'] ?? 'Unknown')),
+                          DataCell(TextButton(onPressed: () => _configure(charger), child: const Text('Configure', style: TextStyle(color: vendorMint)))),
+                        ]);
+                      }).toList(),
+                    ),
+                  ),
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 40),
-          Expanded(
-            child: Container(
-              padding: const EdgeInsets.all(24),
-              decoration: BoxDecoration(
-                color: Theme.of(context).colorScheme.surface,
-                borderRadius: BorderRadius.circular(24),
-                border: Border.all(color: const Color(0xFF2A2A2A)),
-              ),
-              child: SingleChildScrollView(
-                child: DataTable(
-                  headingTextStyle: const TextStyle(color: Color(0xFF8A8A8A), fontWeight: FontWeight.bold),
-                  dataTextStyle: const TextStyle(color: Colors.white),
-                  columns: const [
-                    DataColumn(label: Text('STATION ID')),
-                    DataColumn(label: Text('LOCATION')),
-                    DataColumn(label: Text('GUNS')),
-                    DataColumn(label: Text('STATUS')),
-                    DataColumn(label: Text('ACTIONS')),
-                  ],
-                  rows: [
-                    _buildRow('ST-001', 'Downtown Mall, NY', '2 (CCS2, CHAdeMO)', 'Online', Colors.green),
-                    _buildRow('ST-002', 'Airport Parking, NY', '4 (CCS2)', 'Online', Colors.green),
-                    _buildRow('ST-003', 'Highway 51 Stop', '1 (CCS2)', 'Offline', Colors.redAccent),
-                  ],
-                ),
-              ),
-            ),
-          )
-        ],
-      ),
-    );
-  }
-
-  DataRow _buildRow(String id, String loc, String guns, String status, Color statusColor) {
-    return DataRow(
-      cells: [
-        DataCell(Text(id, style: const TextStyle(fontWeight: FontWeight.bold))),
-        DataCell(Text(loc)),
-        DataCell(Text(guns)),
-        DataCell(
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-            decoration: BoxDecoration(color: statusColor.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(50)),
-            child: Text(status, style: TextStyle(color: statusColor, fontSize: 12, fontWeight: FontWeight.bold)),
-          )
-        ),
-        DataCell(
-          IconButton(
-            icon: const Icon(Icons.edit_outlined, color: Color(0xFF4ADDA2)),
-            onPressed: () {},
-          )
-        ),
-      ],
+        );
+      },
     );
   }
 }

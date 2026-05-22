@@ -1,20 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
-class VendorLayout extends StatefulWidget {
+class VendorLayout extends StatelessWidget {
   final Widget child;
   const VendorLayout({super.key, required this.child});
 
-  @override
-  State<VendorLayout> createState() => _VendorLayoutState();
-}
-
-class _VendorLayoutState extends State<VendorLayout> {
-  final List<Map<String, dynamic>> _menuItems = [
+  static const _tabs = [
     {'title': 'Overview', 'route': '/vendor-dashboard', 'icon': Icons.dashboard_outlined},
-    {'title': 'Stations', 'route': '/vendor-dashboard/stations', 'icon': Icons.ev_station_outlined},
-    {'title': 'Bookings', 'route': '/vendor-dashboard/bookings', 'icon': Icons.book_online_outlined},
-    {'title': 'Payments', 'route': '/vendor-dashboard/payments', 'icon': Icons.account_balance_wallet_outlined},
+    {'title': 'Charging', 'route': '/vendor-dashboard/charging', 'icon': Icons.bolt},
+    {'title': 'Chargers', 'route': '/vendor-dashboard/stations', 'icon': Icons.ev_station_outlined},
+    {'title': 'Sessions', 'route': '/vendor-dashboard/sessions', 'icon': Icons.timeline},
+    {'title': 'Billing', 'route': '/vendor-dashboard/payments', 'icon': Icons.account_balance_wallet_outlined},
     {'title': 'Settings', 'route': '/vendor-dashboard/settings', 'icon': Icons.settings_outlined},
   ];
 
@@ -23,128 +19,121 @@ class _VendorLayoutState extends State<VendorLayout> {
     final location = GoRouterState.of(context).uri.toString();
 
     return Scaffold(
-      body: Row(
-        children: [
-          // ── Sidebar ───────────────────────────────────────────────────
-          Container(
-            width: 260,
-            color: Theme.of(context).colorScheme.surface,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const SizedBox(height: 32),
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 32.0),
-                  child: Row(children: [
-                    Icon(Icons.business, color: Theme.of(context).colorScheme.primary, size: 28),
-                    const SizedBox(width: 8),
-                    const Text('VENDOR', style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.white, letterSpacing: 1.2)),
-                  ]),
-                ),
-                const SizedBox(height: 40),
-                Expanded(
-                  child: ListView.builder(
-                    itemCount: _menuItems.length,
-                    itemBuilder: (context, index) {
-                      final item = _menuItems[index];
-                      // Exact match for overview, startsWith for others to highlight correctly
-                      final isSelected = item['route'] == '/vendor-dashboard' 
-                          ? location == '/vendor-dashboard' 
-                          : location.startsWith(item['route']);
-
-                      return Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 4.0),
-                        child: InkWell(
-                          onTap: () => context.go(item['route']),
-                          borderRadius: BorderRadius.circular(12),
-                          child: Container(
-                            decoration: BoxDecoration(
-                              borderRadius: BorderRadius.circular(12),
-                              color: isSelected ? Theme.of(context).colorScheme.primary.withValues(alpha: 0.1) : Colors.transparent,
-                            ),
-                            child: ListTile(
-                              leading: Icon(item['icon'],
-                                  color: isSelected ? Theme.of(context).colorScheme.primary : const Color(0xFF8A8A8A), size: 22),
-                              title: Text(item['title'],
-                                  style: TextStyle(
-                                    color: isSelected ? Theme.of(context).colorScheme.primary : const Color(0xFF8A8A8A),
-                                    fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
-                                    fontSize: 15,
-                                  )),
-                              selected: isSelected,
-                              contentPadding: const EdgeInsets.symmetric(horizontal: 16.0),
-                              dense: true,
-                            ),
-                          ),
-                        ),
-                      );
-                    },
-                  ),
-                ),
-
-                // Profile section
-                Padding(
-                  padding: const EdgeInsets.all(24.0),
-                  child: Row(children: [
-                    const CircleAvatar(backgroundImage: NetworkImage('https://i.pravatar.cc/150?img=33')),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const Text('ChargePoint', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold), overflow: TextOverflow.ellipsis),
-                          const Text('Vendor Admin', style: TextStyle(color: Color(0xFF8A8A8A), fontSize: 12)),
-                        ],
-                      ),
-                    ),
-                    IconButton(
-                      icon: const Icon(Icons.logout, color: Color(0xFF8A8A8A), size: 20),
-                      onPressed: () {
-                        // TODO: Implement logout logic
-                        context.go('/login');
-                      },
-                    )
-                  ]),
-                ),
-              ],
-            ),
-          ),
-
-          // ── Main Content ──────────────────────────────────────────────
-          Expanded(
-            child: Container(
-              color: Theme.of(context).scaffoldBackgroundColor,
-              child: Column(
+      backgroundColor: const Color(0xFF0F0F0F),
+      body: SafeArea(
+        child: Column(
+          children: [
+            Container(
+              height: 76,
+              padding: const EdgeInsets.symmetric(horizontal: 32),
+              decoration: const BoxDecoration(
+                color: Color(0xFF141414),
+                border: Border(bottom: BorderSide(color: Color(0xFF2A2A2A))),
+              ),
+              child: Row(
                 children: [
-                  // Top bar with notification bell
                   Container(
-                    height: 64,
-                    padding: const EdgeInsets.symmetric(horizontal: 40),
+                    width: 42,
+                    height: 42,
                     decoration: BoxDecoration(
-                      color: Theme.of(context).colorScheme.surface,
-                      border: const Border(bottom: BorderSide(color: Color(0xFF2A2A2A))),
+                      color: const Color(0xFF4ADDA2).withOpacity(0.12),
+                      borderRadius: BorderRadius.circular(10),
                     ),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.end,
-                      children: [
-                        Container(
-                          padding: const EdgeInsets.all(8),
-                          decoration: BoxDecoration(color: const Color(0xFF2A2A2A), borderRadius: BorderRadius.circular(10)),
-                          child: const Icon(Icons.notifications_outlined, color: Colors.white, size: 22),
-                        ),
-                        const SizedBox(width: 16),
-                        const CircleAvatar(radius: 18, backgroundImage: NetworkImage('https://i.pravatar.cc/150?img=33')),
-                      ],
-                    ),
+                    child: const Icon(Icons.business, color: Color(0xFF4ADDA2)),
                   ),
-
-                  // Page content
-                  Expanded(child: widget.child),
+                  const SizedBox(width: 14),
+                  const Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text('Vendor Console', style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.w800)),
+                      Text('ChargePoint Vendor Admin', style: TextStyle(color: Color(0xFF8A8A8A), fontSize: 12)),
+                    ],
+                  ),
+                  const Spacer(),
+                  _VendorTopAction(
+                    icon: Icons.notifications_outlined,
+                    onTap: () {},
+                  ),
+                  const SizedBox(width: 12),
+                  _VendorTopAction(
+                    icon: Icons.logout,
+                    onTap: () => context.go('/login'),
+                  ),
                 ],
               ),
             ),
-          ),
-        ],
+            Container(
+              height: 58,
+              padding: const EdgeInsets.symmetric(horizontal: 32),
+              color: const Color(0xFF101010),
+              child: ListView.separated(
+                scrollDirection: Axis.horizontal,
+                itemCount: _tabs.length,
+                separatorBuilder: (_, __) => const SizedBox(width: 8),
+                itemBuilder: (context, index) {
+                  final item = _tabs[index];
+                  final route = item['route'] as String;
+                  final selected = route == '/vendor-dashboard' ? location == route : location.startsWith(route);
+
+                  return Center(
+                    child: InkWell(
+                      onTap: () => context.go(route),
+                      borderRadius: BorderRadius.circular(10),
+                      child: Container(
+                        height: 40,
+                        padding: const EdgeInsets.symmetric(horizontal: 16),
+                        decoration: BoxDecoration(
+                          color: selected ? const Color(0xFF4ADDA2).withOpacity(0.14) : Colors.transparent,
+                          borderRadius: BorderRadius.circular(10),
+                          border: Border.all(color: selected ? const Color(0xFF4ADDA2).withOpacity(0.35) : Colors.transparent),
+                        ),
+                        child: Row(
+                          children: [
+                            Icon(item['icon'] as IconData, size: 18, color: selected ? const Color(0xFF4ADDA2) : const Color(0xFF8A8A8A)),
+                            const SizedBox(width: 8),
+                            Text(
+                              item['title'] as String,
+                              style: TextStyle(
+                                color: selected ? const Color(0xFF4ADDA2) : const Color(0xFFB0B0B0),
+                                fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  );
+                },
+              ),
+            ),
+            Expanded(child: child),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _VendorTopAction extends StatelessWidget {
+  final IconData icon;
+  final VoidCallback onTap;
+
+  const _VendorTopAction({required this.icon, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(10),
+      child: Container(
+        width: 40,
+        height: 40,
+        decoration: BoxDecoration(
+          color: const Color(0xFF242424),
+          borderRadius: BorderRadius.circular(10),
+        ),
+        child: Icon(icon, color: Colors.white, size: 20),
       ),
     );
   }

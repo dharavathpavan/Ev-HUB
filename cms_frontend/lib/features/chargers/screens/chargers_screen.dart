@@ -5,6 +5,7 @@ import 'dart:convert';
 import 'dart:math' as math;
 import 'package:qr_flutter/qr_flutter.dart';
 import 'package:go_router/go_router.dart';
+import 'package:cms_frontend/config.dart';
 
 class ChargersScreen extends StatefulWidget {
   const ChargersScreen({super.key});
@@ -204,7 +205,7 @@ class _AnimatedChargerCardState extends State<AnimatedChargerCard> with SingleTi
       }
 
       final response = await http.post(
-        Uri.parse('http://localhost:3003/api/ocpp/remote-command'),
+        Uri.parse('${Config.apiBaseUrl}/api/ocpp/remote-command'),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode(bodyData),
       );
@@ -329,7 +330,7 @@ class _AnimatedChargerCardState extends State<AnimatedChargerCard> with SingleTi
     setState(() => _isSendingCommand = true);
     try {
       final response = await http.post(
-        Uri.parse('http://localhost:3003/api/payments/qr-initiate'),
+        Uri.parse('${Config.apiBaseUrl}/api/payments/qr-initiate'),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({
           'charger_id': widget.charger['charger_id'],

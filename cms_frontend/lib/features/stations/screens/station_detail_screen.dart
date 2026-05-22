@@ -9,6 +9,7 @@ import 'dart:convert';
 import 'dart:async';
 import 'package:intl/intl.dart';
 import '../../chargers/screens/chargers_screen.dart';
+import 'package:cms_frontend/config.dart';
 
 class StationDetailScreen extends StatefulWidget {
   final String stationId;
@@ -63,7 +64,7 @@ class _StationDetailScreenState extends State<StationDetailScreen>
   Future<void> _stopSession(String chargerId, String sessionId) async {
     try {
       await http.post(
-        Uri.parse('http://localhost:3003/api/ocpp/remote-command'),
+        Uri.parse('${Config.apiBaseUrl}/api/ocpp/remote-command'),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({'charger_id': chargerId, 'command': 'RemoteStopTransaction'}),
       );
@@ -1225,7 +1226,7 @@ class _LoadBalancingTabState extends State<LoadBalancingTab> {
     setState(() => _isSaving = true);
     try {
       final response = await http.post(
-        Uri.parse('http://localhost:3003/api/ocpp/load-balancing'),
+        Uri.parse('${Config.apiBaseUrl}/api/ocpp/load-balancing'),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({'station_id': widget.stationId, 'max_power_capacity_kw': _maxPowerKw, 'load_balancing_enabled': _isLoadBalancingEnabled}),
       );
@@ -1243,7 +1244,7 @@ class _LoadBalancingTabState extends State<LoadBalancingTab> {
     if (!_isLoadBalancingEnabled) { ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Please enable Load Balancing first.'), backgroundColor: Colors.orange)); return; }
     setState(() => _isSaving = true);
     try {
-      final response = await http.post(Uri.parse('http://localhost:3003/api/ocpp/smart-charging/rebalance'), headers: {'Content-Type': 'application/json'}, body: jsonEncode({'station_id': widget.stationId}));
+      final response = await http.post(Uri.parse('${Config.apiBaseUrl}/api/ocpp/smart-charging/rebalance'), headers: {'Content-Type': 'application/json'}, body: jsonEncode({'station_id': widget.stationId}));
       if (response.statusCode == 200) { if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Grid successfully rebalanced!'), backgroundColor: Color(0xFF4ADDA2))); }
       else throw Exception('Rebalance failed');
     } catch (e) {

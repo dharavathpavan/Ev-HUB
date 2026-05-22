@@ -25,7 +25,7 @@ export async function GET() {
 export async function POST(req: Request) {
   try {
     const body = await req.json();
-    const { vendor_id, business_name, payout_bank_details, brand_color_primary, commission_rate } = body;
+    const { vendor_id, business_name, payout_bank_details, brand_color_primary, commission_rate, contact_phone, business_address, kyc_status } = body;
 
     if (!vendor_id) {
       return NextResponse.json({ success: false, error: 'Missing vendor_id parameter' }, { status: 400 });
@@ -35,7 +35,10 @@ export async function POST(req: Request) {
       business_name,
       payout_bank_details,
       brand_color_primary,
-      commission_rate: commission_rate !== undefined ? Number(commission_rate) : undefined
+      commission_rate: commission_rate !== undefined ? Number(commission_rate) : undefined,
+      contact_phone,
+      business_address,
+      kyc_status
     });
 
     if (!updated) {
@@ -49,7 +52,10 @@ export async function POST(req: Request) {
           business_name,
           payout_bank_details,
           brand_color_primary,
-          commission_rate: commission_rate !== undefined ? Number(commission_rate) : undefined
+          commission_rate: commission_rate !== undefined ? Number(commission_rate) : undefined,
+          contact_phone,
+          business_address,
+          kyc_status
         })
         .eq('vendor_id', vendor_id);
     } catch (_) {}

@@ -41,6 +41,10 @@ class _MainLayoutState extends State<MainLayout> {
   Widget build(BuildContext context) {
     final location = GoRouterState.of(context).uri.toString();
 
+    if (location.startsWith('/vendor-dashboard')) {
+      return widget.child;
+    }
+
     return Consumer<NotificationProvider>(
       builder: (context, notifProvider, _) {
         return Scaffold(

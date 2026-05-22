@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase';
+import { vendorOps } from '@/lib/vendorOps';
 
 // This acts as an OCPP 1.6J / 2.0.1 Webhook Listener.
 // An external OCPP server (like SteVe or a custom CSMS) would forward requests here.
@@ -19,6 +20,7 @@ export async function POST(req: Request) {
         .from('chargers')
         .update({ last_heartbeat: new Date().toISOString() })
         .eq('charger_id', charger_id);
+      vendorOps.updateTelemetry({ charger_id });
       
       if (error) throw error;
       return NextResponse.json({ status: 'Heartbeat Accepted' });
@@ -37,6 +39,7 @@ export async function POST(req: Request) {
         .from('chargers')
         .update({ status: mappedStatus })
         .eq('charger_id', charger_id);
+      vendorOps.updateTelemetry({ charger_id, status: mappedStatus as any });
 
       if (error) throw error;
       return NextResponse.json({ status: 'Status Updated' });
@@ -56,6 +59,12 @@ export async function POST(req: Request) {
           temperature: temperature ?? 25
         })
         .eq('charger_id', charger_id);
+      vendorOps.updateTelemetry({
+        charger_id,
+        current_kw: current_kw ?? 0,
+        kwh_delivered: ocppPayload.kwh_delivered,
+        soc_percent: ocppPayload.soc_percent,
+      });
 
       if (error) throw error;
       return NextResponse.json({ status: 'Telemetry Updated' });

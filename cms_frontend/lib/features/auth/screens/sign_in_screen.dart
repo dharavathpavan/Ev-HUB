@@ -74,7 +74,7 @@ class _SignInScreenState extends State<SignInScreen> with TickerProviderStateMix
       
       if (mounted) {
         setState(() => _isLoading = false);
-        context.go('/dashboard');
+        context.go('/vendor-dashboard');
       }
     } on AuthException catch (e) {
       if (mounted) {
@@ -413,7 +413,7 @@ class _SignInScreenState extends State<SignInScreen> with TickerProviderStateMix
                                   style: TextStyle(color: Colors.white.withOpacity(0.8), fontSize: 13),
                                 ),
                               ),
-                              
+
                               const SizedBox(height: 24),
                               
                               // Sign Up Link

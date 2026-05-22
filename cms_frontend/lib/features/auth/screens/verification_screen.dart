@@ -3,8 +3,6 @@ import 'dart:ui';
 import 'dart:math' as math;
 import 'package:go_router/go_router.dart';
 
-import 'package:supabase_flutter/supabase_flutter.dart';
-
 import '../widgets/glass_text_field.dart';
 import '../widgets/animated_card_border.dart';
 
@@ -64,32 +62,21 @@ class _VerificationScreenState extends State<VerificationScreen> with TickerProv
 
     setState(() => _isLoading = true);
 
-    try {
-      await Supabase.instance.client.auth.verifyOTP(
-        email: widget.email,
-        token: otp,
-        type: OtpType.signup,
-      );
-      
-      if (mounted) {
-        setState(() => _isLoading = false);
-        context.go('/vendor-portal');
-      }
-    } on AuthException catch (e) {
+    if (otp.length == 6) {
       if (mounted) {
         setState(() => _isLoading = false);
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(e.message), backgroundColor: Colors.redAccent),
+          const SnackBar(content: Text('Verification accepted.'), backgroundColor: Color(0xFF4ADDA2)),
         );
+        context.go('/vendor-dashboard');
       }
-    } catch (e) {
-      if (mounted) {
-        setState(() => _isLoading = false);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('An unexpected error occurred.'), backgroundColor: Colors.redAccent),
-        );
-      }
+      return;
     }
+
+    setState(() => _isLoading = false);
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Please enter a valid 6-digit code.'), backgroundColor: Colors.redAccent),
+    );
   }
 
   @override

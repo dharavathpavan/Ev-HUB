@@ -3,6 +3,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'package:go_router/go_router.dart';
+import 'package:cms_frontend/config.dart';
 
 class ChargerConfigScreen extends StatefulWidget {
   const ChargerConfigScreen({super.key});
@@ -268,7 +269,7 @@ class _OCPPConfigEditorState extends State<_OCPPConfigEditor> {
     if (newValue != null && newValue != currentValue) {
       try {
         final response = await http.post(
-          Uri.parse('http://localhost:3003/api/ocpp/configuration'),
+          Uri.parse('${Config.apiBaseUrl}/api/ocpp/configuration'),
           headers: {'Content-Type': 'application/json'},
           body: jsonEncode({'action': 'CHANGE_CONFIGURATION', 'charger_id': widget.chargerId, 'key_name': keyName, 'value': newValue}),
         );

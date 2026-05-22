@@ -3,6 +3,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'package:intl/intl.dart';
+import 'package:cms_frontend/config.dart';
 
 class SessionsScreen extends StatefulWidget {
   const SessionsScreen({super.key});
@@ -26,7 +27,7 @@ class _SessionsScreenState extends State<SessionsScreen> {
   Future<void> _stopSession(String chargerId, String sessionId) async {
     try {
       await http.post(
-        Uri.parse('http://localhost:3003/api/ocpp/remote-command'),
+        Uri.parse('${Config.apiBaseUrl}/api/ocpp/remote-command'),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({
           'charger_id': chargerId,

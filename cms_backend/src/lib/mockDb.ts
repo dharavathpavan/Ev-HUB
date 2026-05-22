@@ -2,15 +2,22 @@ import fs from 'fs';
 import path from 'path';
 
 const MOCK_DB_PATH = path.join(process.cwd(), 'src/lib/mock_db_store.json');
+const IS_PRODUCTION = process.env.NODE_ENV === 'production';
 
 export interface VendorApplication {
   id: string;
   business_name: string;
   contact_email: string;
-  tax_id: string;
+  tax_id?: string;
+  business_registration_number?: string;
+  vat_number?: string;
+  company_address?: string;
+  phone_number?: string;
   utility_bill_url?: string;
   estimated_chargers: number;
+  kyc_status?: 'Pending' | 'Verified' | 'Failed';
   status: 'Pending' | 'Approved' | 'Rejected';
+  vendor_id?: string;
   admin_notes?: string;
   created_at: string;
   updated_at: string;
@@ -20,10 +27,13 @@ export interface VendorProfile {
   id: string;
   vendor_id: string;
   business_name: string;
+  contact_phone?: string;
+  business_address?: string;
   payout_bank_details?: any;
   brand_logo_url?: string;
   brand_color_primary: string;
   commission_rate: number;
+  kyc_status?: 'Pending' | 'Verified' | 'Failed';
   status: 'Active' | 'Suspended';
   created_at: string;
 }
@@ -46,11 +56,35 @@ export interface QrMapping {
   created_at: string;
 }
 
+export interface VendorOrder {
+  id: string;
+  booking_id: string;
+  vendor_id: string;
+  customer_name: string;
+  station_location: string;
+  scheduled_at: string;
+  status: 'Pending' | 'Confirmed' | 'Completed' | 'Cancelled';
+  amount: number;
+  created_at: string;
+}
+
+export interface VendorPayment {
+  id: string;
+  vendor_id: string;
+  description: string;
+  amount: number;
+  status: 'Pending' | 'Processed' | 'Completed';
+  payment_date: string;
+  created_at: string;
+}
+
 interface MockSchema {
   vendor_applications: VendorApplication[];
   vendor_profiles: VendorProfile[];
   charging_guns: ChargingGun[];
   qr_mappings: QrMapping[];
+  vendor_orders: VendorOrder[];
+  vendor_payments: VendorPayment[];
 }
 
 const DEFAULT_DATA: MockSchema = {
@@ -134,6 +168,50 @@ const DEFAULT_DATA: MockSchema = {
       short_url: 'https://app.bleuright.com/charge?qr=QR-CHG-A1-G2',
       created_at: new Date().toISOString()
     }
+  ],
+  vendor_orders: [
+    {
+      id: 'order-001',
+      booking_id: 'BK-9912',
+      vendor_id: 'vendor-voltspark',
+      customer_name: 'Alice Smith',
+      station_location: 'Downtown Mall, NY',
+      scheduled_at: new Date(Date.now() + 3600000).toISOString(),
+      status: 'Confirmed',
+      amount: 15.00,
+      created_at: new Date().toISOString()
+    },
+    {
+      id: 'order-002',
+      booking_id: 'BK-9914',
+      vendor_id: 'vendor-voltspark',
+      customer_name: 'Charlie Davis',
+      station_location: 'Highway 51 Stop',
+      scheduled_at: new Date(Date.now() + 7200000).toISOString(),
+      status: 'Pending',
+      amount: 10.50,
+      created_at: new Date().toISOString()
+    }
+  ],
+  vendor_payments: [
+    {
+      id: 'payment-001',
+      vendor_id: 'vendor-voltspark',
+      description: 'Charging Session (ST-001)',
+      amount: 15.00,
+      status: 'Completed',
+      payment_date: new Date(Date.now() - 86400000).toISOString(),
+      created_at: new Date().toISOString()
+    },
+    {
+      id: 'payment-002',
+      vendor_id: 'vendor-voltspark',
+      description: 'Weekly Payout to Bank',
+      amount: -1200.00,
+      status: 'Processed',
+      payment_date: new Date(Date.now() - 43200000).toISOString(),
+      created_at: new Date().toISOString()
+    }
   ]
 };
 
@@ -152,6 +230,11 @@ function readDb(): MockSchema {
 }
 
 function writeDb(data: MockSchema) {
+  if (IS_PRODUCTION) {
+    console.warn('Mock DB write skipped in production mode. Switch to Supabase for persistent data.');
+    return;
+  }
+
   try {
     const dir = path.dirname(MOCK_DB_PATH);
     if (!fs.existsSync(dir)) {
@@ -188,15 +271,16 @@ export const mockDb = {
     const index = db.vendor_applications.findIndex(a => a.id === id);
     if (index === -1) return null;
 
+    const vendorId = db.vendor_applications[index].vendor_id || `vendor-${Math.random().toString(36).substring(2, 9)}`;
     db.vendor_applications[index].status = status;
+    db.vendor_applications[index].kyc_status = status === 'Approved' ? 'Verified' : 'Failed';
+    db.vendor_applications[index].vendor_id = vendorId;
     db.vendor_applications[index].admin_notes = adminNotes;
     db.vendor_applications[index].updated_at = new Date().toISOString();
 
     const app = db.vendor_applications[index];
 
-    // If approved, automatically create a vendor profile
     if (status === 'Approved') {
-      const vendorId = `vendor-${Math.random().toString(36).substring(2, 9)}`;
       const newProfile: VendorProfile = {
         id: `profile-${Math.random().toString(36).substring(2, 9)}`,
         vendor_id: vendorId,
@@ -204,6 +288,7 @@ export const mockDb = {
         brand_color_primary: '#4ADDA2',
         commission_rate: 10.0,
         status: 'Active',
+        kyc_status: 'Verified',
         created_at: new Date().toISOString()
       };
       db.vendor_profiles.unshift(newProfile);
@@ -278,6 +363,16 @@ export const mockDb = {
   // --- QR Mappings ---
   getQrMappings: (): QrMapping[] => {
     return readDb().qr_mappings;
+  },
+
+  getOrders: (vendorId?: string): VendorOrder[] => {
+    const orders = readDb().vendor_orders;
+    return vendorId ? orders.filter(o => o.vendor_id === vendorId) : orders;
+  },
+
+  getPayments: (vendorId?: string): VendorPayment[] => {
+    const payments = readDb().vendor_payments;
+    return vendorId ? payments.filter(p => p.vendor_id === vendorId) : payments;
   },
 
   mapQr: (mapping: Omit<QrMapping, 'created_at'>): QrMapping => {

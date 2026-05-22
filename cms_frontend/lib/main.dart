@@ -1,10 +1,11 @@
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
+import 'package:google_fonts/google_fonts.dart' hide Config;
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import 'config.dart';
 import 'features/layout/main_layout.dart';
 import 'features/dashboard/screens/dashboard_screen.dart';
 import 'features/stations/screens/stations_screen.dart';
@@ -29,6 +30,14 @@ import 'features/settings/screens/settings_screen.dart';
 import 'features/settings/screens/vendor_onboarding_wizard.dart';
 import 'features/notifications/screens/notifications_screen.dart';
 import 'features/notifications/notification_provider.dart';
+import 'features/vendor_dashboard/screens/vendor_layout.dart';
+import 'features/vendor_dashboard/screens/vendor_overview_screen.dart';
+import 'features/vendor_dashboard/screens/vendor_stations_screen.dart';
+import 'features/vendor_dashboard/screens/vendor_bookings_screen.dart';
+import 'features/vendor_dashboard/screens/vendor_payments_screen.dart';
+import 'features/vendor_dashboard/screens/vendor_settings_screen.dart';
+import 'features/vendor_dashboard/screens/vendor_charging_screen.dart';
+import 'features/vendor_dashboard/screens/vendor_sessions_screen.dart';
 import 'features/landing/screens/landing_screen.dart';
 
 import 'features/auth/screens/sign_in_screen.dart';
@@ -38,9 +47,12 @@ import 'features/auth/screens/verification_screen.dart';
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   
+  assert(Config.supabaseUrl.isNotEmpty, 'SUPABASE_URL must be provided via --dart-define.');
+  assert(Config.supabaseAnonKey.isNotEmpty, 'SUPABASE_ANON_KEY must be provided via --dart-define.');
+
   await Supabase.initialize(
-    url: 'https://exgoxwxvdgocccrcfmow.supabase.co',
-    anonKey: 'sb_publishable_yRe6KAiaT1l-mUTX7hmYYw_mXI-g1qo',
+    url: Config.supabaseUrl,
+    anonKey: Config.supabaseAnonKey,
   );
   
   runApp(const EVCMSApp());
@@ -67,6 +79,34 @@ final _router = GoRouter(
         final email = state.uri.queryParameters['email'] ?? '';
         return VerificationScreen(email: email);
       },
+    ),
+    GoRoute(
+      path: '/vendor-dashboard',
+      builder: (context, state) => const VendorLayout(child: VendorOverviewScreen()),
+    ),
+    GoRoute(
+      path: '/vendor-dashboard/charging',
+      builder: (context, state) => const VendorLayout(child: VendorChargingScreen()),
+    ),
+    GoRoute(
+      path: '/vendor-dashboard/stations',
+      builder: (context, state) => const VendorLayout(child: VendorStationsScreen()),
+    ),
+    GoRoute(
+      path: '/vendor-dashboard/sessions',
+      builder: (context, state) => const VendorLayout(child: VendorSessionsScreen()),
+    ),
+    GoRoute(
+      path: '/vendor-dashboard/bookings',
+      builder: (context, state) => const VendorLayout(child: VendorBookingsScreen()),
+    ),
+    GoRoute(
+      path: '/vendor-dashboard/payments',
+      builder: (context, state) => const VendorLayout(child: VendorPaymentsScreen()),
+    ),
+    GoRoute(
+      path: '/vendor-dashboard/settings',
+      builder: (context, state) => const VendorLayout(child: VendorSettingsScreen()),
     ),
     ShellRoute(
       builder: (context, state, child) {

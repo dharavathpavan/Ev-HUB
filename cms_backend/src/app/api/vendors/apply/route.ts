@@ -31,22 +31,24 @@ export async function GET() {
 export async function POST(req: Request) {
   try {
     const body = await req.json();
-    const { business_name, contact_email, tax_id, utility_bill_url, estimated_chargers } = body;
+    const { business_name, contact_email, tax_id, business_registration_number, vat_number, company_address, phone_number, utility_bill_url, estimated_chargers } = body;
 
-    if (!business_name || !contact_email) {
-      return NextResponse.json({ success: false, error: 'Missing required parameters: business_name and contact_email' }, { status: 400 });
+    if (!business_name || !contact_email || !company_address) {
+      return NextResponse.json({ success: false, error: 'Missing required parameters: business_name, contact_email and company_address' }, { status: 400 });
     }
 
-    // 1. Write to mock DB (guaranteed to work)
     const newApp = mockDb.addApplication({
       business_name,
       contact_email,
       tax_id: tax_id || '',
+      business_registration_number: business_registration_number || '',
+      vat_number: vat_number || '',
+      company_address: company_address || '',
+      phone_number: phone_number || '',
       utility_bill_url: utility_bill_url || '',
       estimated_chargers: Number(estimated_chargers) || 0
     });
 
-    // 2. Try hybrid write to Supabase
     try {
       await supabaseAdmin
         .from('vendor_applications')
@@ -54,8 +56,13 @@ export async function POST(req: Request) {
           business_name,
           contact_email,
           tax_id,
+          business_registration_number,
+          vat_number,
+          company_address,
+          phone_number,
           utility_bill_url,
           estimated_chargers: Number(estimated_chargers) || 0,
+          kyc_status: 'Pending',
           status: 'Pending'
         }]);
     } catch (_) {

@@ -3,6 +3,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'package:intl/intl.dart';
+import 'package:cms_frontend/config.dart';
 
 class AlertsScreen extends StatefulWidget {
   const AlertsScreen({super.key});
@@ -28,7 +29,7 @@ class _AlertsScreenState extends State<AlertsScreen> {
     setState(() => _isResolving = true);
     try {
       final response = await http.post(
-        Uri.parse('http://localhost:3003/api/ocpp/alerts'),
+        Uri.parse('${Config.apiBaseUrl}/api/ocpp/alerts'),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({
           'action': 'RESOLVE_FAULT',

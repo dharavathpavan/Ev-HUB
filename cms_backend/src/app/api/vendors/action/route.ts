@@ -11,31 +11,34 @@ export async function POST(req: Request) {
       return NextResponse.json({ success: false, error: 'Missing or invalid parameters. Action must be "Approved" or "Rejected".' }, { status: 400 });
     }
 
-    // 1. Write to mock DB (guaranteed)
     const updatedApp = mockDb.updateApplicationStatus(id, action, admin_notes);
     if (!updatedApp) {
       return NextResponse.json({ success: false, error: 'Application not found' }, { status: 404 });
     }
 
-    // 2. Try hybrid update on Supabase
     try {
+      const vendorId = updatedApp.vendor_id || `vendor-${Math.random().toString(36).substring(2, 9)}`;
+
       await supabaseAdmin
         .from('vendor_applications')
         .update({
           status: action,
+          kyc_status: action === 'Approved' ? 'Verified' : 'Failed',
+          vendor_id: vendorId,
           admin_notes,
           updated_at: new Date().toISOString()
         })
         .eq('id', id);
 
       if (action === 'Approved') {
-        // Create vendor profile in Supabase
         await supabaseAdmin
           .from('vendor_profiles')
           .insert([{
+            vendor_id: vendorId,
             business_name: updatedApp.business_name,
             commission_rate: 10.0,
-            status: 'Active'
+            status: 'Active',
+            kyc_status: 'Verified'
           }]);
       }
     } catch (_) {

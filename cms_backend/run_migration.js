@@ -28,9 +28,15 @@ CREATE TABLE IF NOT EXISTS vendor_applications (
     business_name TEXT NOT NULL,
     contact_email TEXT NOT NULL,
     tax_id TEXT,
+    business_registration_number TEXT,
+    vat_number TEXT,
+    company_address TEXT,
+    phone_number TEXT,
     utility_bill_url TEXT,
     estimated_chargers INTEGER DEFAULT 0,
+    kyc_status TEXT NOT NULL DEFAULT 'Pending' CHECK (kyc_status IN ('Pending', 'Verified', 'Failed')),
     status TEXT NOT NULL DEFAULT 'Pending' CHECK (status IN ('Pending', 'Approved', 'Rejected')),
+    vendor_id TEXT,
     admin_notes TEXT,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL,
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
@@ -41,11 +47,48 @@ CREATE TABLE IF NOT EXISTS vendor_profiles (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     vendor_id TEXT UNIQUE,
     business_name TEXT NOT NULL,
+    contact_phone TEXT,
+    business_address TEXT,
     payout_bank_details JSONB,
     brand_logo_url TEXT,
     brand_color_primary TEXT DEFAULT '#4ADDA2',
     commission_rate NUMERIC DEFAULT 10.0,
+    kyc_status TEXT NOT NULL DEFAULT 'Verified' CHECK (kyc_status IN ('Pending', 'Verified', 'Failed')),
     status TEXT NOT NULL DEFAULT 'Active' CHECK (status IN ('Active', 'Suspended')),
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
+);
+
+-- 3. Create vendor_users table
+CREATE TABLE IF NOT EXISTS vendor_users (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id TEXT UNIQUE NOT NULL,
+    vendor_id TEXT NOT NULL,
+    role TEXT NOT NULL DEFAULT 'vendor_staff' CHECK (role IN ('super_admin', 'vendor', 'vendor_staff')),
+    is_active BOOLEAN NOT NULL DEFAULT true,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
+);
+
+-- 4. Create vendor_orders table
+CREATE TABLE IF NOT EXISTS vendor_orders (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    vendor_id TEXT NOT NULL,
+    booking_id TEXT NOT NULL,
+    customer_name TEXT NOT NULL,
+    station_location TEXT NOT NULL,
+    scheduled_at TIMESTAMP WITH TIME ZONE,
+    status TEXT NOT NULL DEFAULT 'Pending' CHECK (status IN ('Pending', 'Confirmed', 'Completed', 'Cancelled')),
+    amount NUMERIC NOT NULL DEFAULT 0.0,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
+);
+
+-- 5. Create vendor_payments table
+CREATE TABLE IF NOT EXISTS vendor_payments (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    vendor_id TEXT NOT NULL,
+    description TEXT NOT NULL,
+    amount NUMERIC NOT NULL,
+    status TEXT NOT NULL DEFAULT 'Pending' CHECK (status IN ('Pending', 'Processed', 'Completed')),
+    payment_date TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
 );
 

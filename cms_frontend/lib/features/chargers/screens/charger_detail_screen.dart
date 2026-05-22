@@ -6,6 +6,7 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:qr_flutter/qr_flutter.dart';
 import '../../../core/widgets/ev_loader.dart';
+import 'package:cms_frontend/config.dart';
 
 class ChargerDetailScreen extends StatefulWidget {
   final String chargerId;
@@ -34,7 +35,7 @@ class _ChargerDetailScreenState extends State<ChargerDetailScreen> with TickerPr
     setState(() => _isLoadingGuns = true);
     try {
       final response = await http.get(
-        Uri.parse('http://localhost:3003/api/chargers/guns?charger_id=${widget.chargerId}'),
+        Uri.parse('${Config.apiBaseUrl}/api/chargers/guns?charger_id=${widget.chargerId}'),
       );
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
@@ -57,7 +58,7 @@ class _ChargerDetailScreenState extends State<ChargerDetailScreen> with TickerPr
     setState(() => _isSendingCommand = true);
     try {
       final response = await http.post(
-        Uri.parse('http://localhost:3003/api/payments/qr-initiate'),
+        Uri.parse('${Config.apiBaseUrl}/api/payments/qr-initiate'),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({
           'qr_id': qrId,
@@ -206,7 +207,7 @@ class _ChargerDetailScreenState extends State<ChargerDetailScreen> with TickerPr
     setState(() => _isSendingCommand = true);
     try {
       final response = await http.post(
-        Uri.parse('http://localhost:3003/api/ocpp/remote-command'),
+        Uri.parse('${Config.apiBaseUrl}/api/ocpp/remote-command'),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({
           'charger_id': widget.chargerId,
@@ -279,7 +280,7 @@ class _ChargerDetailScreenState extends State<ChargerDetailScreen> with TickerPr
     setState(() => _isSendingCommand = true);
     try {
       final response = await http.post(
-        Uri.parse('http://localhost:3003/api/payments/qr-initiate'),
+        Uri.parse('${Config.apiBaseUrl}/api/payments/qr-initiate'),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({
           'charger_id': charger['charger_id'],

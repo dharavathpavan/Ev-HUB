@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:fl_chart/fl_chart.dart';
-import 'dart:async';
+import 'package:go_router/go_router.dart';
+
+import '../vendor_ops_service.dart';
+import '../widgets/vendor_ops_widgets.dart';
 
 class VendorOverviewScreen extends StatefulWidget {
   const VendorOverviewScreen({super.key});
@@ -9,250 +11,207 @@ class VendorOverviewScreen extends StatefulWidget {
   State<VendorOverviewScreen> createState() => _VendorOverviewScreenState();
 }
 
-class _VendorOverviewScreenState extends State<VendorOverviewScreen> with SingleTickerProviderStateMixin {
-  late AnimationController _animController;
-  late Animation<double> _fadeAnimation;
-  late ScrollController _scrollController;
-  Timer? _tickerTimer;
-
-  final List<String> _feedItems = [
-    'User Alice topped up wallet (+\$50.00)',
-    'Session started at ChargePoint Downtown #01',
-    'Session ended at ChargePoint Downtown #02 (12.4 kWh)',
-    'Payout of \$1,200.50 deposited to your bank',
-    'New Booking: 14:00 at Station #4',
-  ];
+class _VendorOverviewScreenState extends State<VendorOverviewScreen> {
+  late Future<Map<String, dynamic>> _opsFuture;
 
   @override
   void initState() {
     super.initState();
-    _animController = AnimationController(vsync: this, duration: const Duration(milliseconds: 800));
-    _fadeAnimation = CurvedAnimation(parent: _animController, curve: Curves.easeIn);
-    _animController.forward();
-
-    _scrollController = ScrollController();
-    _startTicker();
+    _opsFuture = VendorOpsService.fetchOperations();
   }
 
-  void _startTicker() {
-    _tickerTimer = Timer.periodic(const Duration(seconds: 4), (timer) {
-      if (_scrollController.hasClients) {
-        double maxScroll = _scrollController.position.maxScrollExtent;
-        double currentScroll = _scrollController.position.pixels;
-        double target = currentScroll + 50;
-        if (target > maxScroll) {
-          _scrollController.jumpTo(0);
-        } else {
-          _scrollController.animateTo(target, duration: const Duration(milliseconds: 500), curve: Curves.easeInOut);
-        }
-      }
-    });
-  }
-
-  @override
-  void dispose() {
-    _animController.dispose();
-    _scrollController.dispose();
-    _tickerTimer?.cancel();
-    super.dispose();
+  void _refresh() {
+    setState(() => _opsFuture = VendorOpsService.fetchOperations());
   }
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Colors.transparent,
-      body: FadeTransition(
-        opacity: _fadeAnimation,
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(40.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Text('Vendor Dashboard', style: TextStyle(fontSize: 32, fontWeight: FontWeight.bold, color: Colors.white)),
-              const SizedBox(height: 8),
-              const Text('Welcome back! Here is what is happening with your stations.', style: TextStyle(color: Color(0xFF8A8A8A))),
-              
-              const SizedBox(height: 40),
-              
-              // Animated KPI Ribbon
-              Row(
-                children: [
-                  Expanded(child: _buildAnimatedKpiCard('Total Revenue', '\$4,204.50', Icons.attach_money, const Color(0xFF4ADDA2), delay: 0)),
-                  const SizedBox(width: 24),
-                  Expanded(child: _buildAnimatedKpiCard('Active Sessions', '12', Icons.ev_station, Colors.amber, delay: 200)),
-                  const SizedBox(width: 24),
-                  Expanded(child: _buildAnimatedKpiCard('Network Uptime', '99.9%', Icons.cloud_done, Colors.purpleAccent, delay: 400)),
-                ],
-              ),
-              
-              const SizedBox(height: 40),
+    return FutureBuilder<Map<String, dynamic>>(
+      future: _opsFuture,
+      builder: (context, snapshot) {
+        final data = snapshot.data;
+        final summary = data?['summary'] as Map<String, dynamic>? ?? {};
+        final chargers = List<Map<String, dynamic>>.from(data?['chargers'] ?? []);
+        final sessions = List<Map<String, dynamic>>.from(data?['sessions'] ?? []);
+        final wallet = data?['wallet'] as Map<String, dynamic>? ?? {};
+        final activity = List<String>.from(data?['recent_activity'] ?? []);
 
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Left Column: Chart
-                  Expanded(
-                    flex: 2,
-                    child: Column(
-                      children: [
-                        _buildChartCard('Revenue (Last 7 Days)', _buildRevenueChart(), const Color(0xFF4ADDA2)),
-                      ],
-                    ),
+        return RefreshIndicator(
+          onRefresh: () async => _refresh(),
+          child: SingleChildScrollView(
+            physics: const AlwaysScrollableScrollPhysics(),
+            padding: const EdgeInsets.all(32),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                VendorPageHeader(
+                  title: 'Vendor Operations',
+                  subtitle: 'Charging, payment, settlement, and charger health in one workspace.',
+                  action: ElevatedButton.icon(
+                    onPressed: _refresh,
+                    icon: const Icon(Icons.refresh, color: Colors.black, size: 18),
+                    label: const Text('Refresh', style: TextStyle(color: Colors.black, fontWeight: FontWeight.w700)),
+                    style: ElevatedButton.styleFrom(backgroundColor: vendorMint, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8))),
                   ),
-                  const SizedBox(width: 40),
-                  
-                  // Right Column: Recent Activity Feed
-                  Expanded(
-                    flex: 1,
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Text('Recent Activity', style: TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold)),
-                        const SizedBox(height: 16),
-                        Container(
-                          height: 350,
-                          padding: const EdgeInsets.all(24),
-                          decoration: BoxDecoration(
-                            color: Theme.of(context).colorScheme.surface,
-                            borderRadius: BorderRadius.circular(24),
-                            border: Border.all(color: const Color(0xFF2A2A2A)),
-                          ),
-                          child: ListView.separated(
-                            controller: _scrollController,
-                            itemCount: _feedItems.length,
-                            separatorBuilder: (context, index) => const Divider(color: Color(0xFF2A2A2A), height: 32),
-                            itemBuilder: (context, index) {
-                              return Row(
-                                children: [
-                                  Container(
-                                    width: 8, height: 8,
-                                    decoration: const BoxDecoration(color: Color(0xFF4ADDA2), shape: BoxShape.circle),
-                                  ),
-                                  const SizedBox(width: 16),
-                                  Expanded(child: Text(_feedItems[index], style: const TextStyle(color: Color(0xFF8A8A8A)))),
-                                ],
-                              );
-                            },
-                          ),
-                        )
-                      ],
-                    ),
-                  )
-                ],
-              )
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildAnimatedKpiCard(String title, String value, IconData icon, Color color, {required int delay}) {
-    return TweenAnimationBuilder(
-      tween: Tween<double>(begin: 0, end: 1),
-      duration: const Duration(milliseconds: 800),
-      curve: Curves.easeOutBack,
-      builder: (context, double opacity, child) {
-        return Transform.scale(
-          scale: 0.8 + (0.2 * opacity),
-          child: Opacity(
-            opacity: opacity,
-            child: child,
+                ),
+                const SizedBox(height: 28),
+                Row(
+                  children: [
+                    Expanded(child: VendorKpiCard(title: 'Lifetime Revenue', value: money(summary['total_revenue']), icon: Icons.currency_rupee, color: vendorMint)),
+                    const SizedBox(width: 16),
+                    Expanded(child: VendorKpiCard(title: 'Active Sessions', value: '${summary['active_sessions'] ?? 0}', icon: Icons.bolt, color: Colors.amber)),
+                    const SizedBox(width: 16),
+                    Expanded(child: VendorKpiCard(title: 'Charger Uptime', value: '${summary['charger_uptime'] ?? 0}%', icon: Icons.health_and_safety_outlined, color: Colors.blueAccent)),
+                    const SizedBox(width: 16),
+                    Expanded(child: VendorKpiCard(title: 'Pending Refunds', value: '${summary['pending_refunds'] ?? 0}', icon: Icons.currency_exchange, color: Colors.orangeAccent)),
+                  ],
+                ),
+                const SizedBox(height: 24),
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Expanded(flex: 2, child: _LiveChargerGrid(chargers: chargers)),
+                    const SizedBox(width: 20),
+                    Expanded(child: _WalletAndActivity(wallet: wallet, activity: activity)),
+                  ],
+                ),
+                const SizedBox(height: 24),
+                _ActiveSessionPreview(sessions: sessions, onOpen: () => context.go('/vendor-dashboard/sessions')),
+              ],
+            ),
           ),
         );
       },
-      child: Container(
-        padding: const EdgeInsets.all(32),
-        decoration: BoxDecoration(
-          color: Theme.of(context).colorScheme.surface,
-          borderRadius: BorderRadius.circular(24),
-          border: Border.all(color: color.withValues(alpha: 0.3), width: 2),
-          boxShadow: [
-            BoxShadow(color: color.withValues(alpha: 0.1), blurRadius: 20, spreadRadius: -5)
-          ]
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(title, style: const TextStyle(color: Color(0xFF8A8A8A), fontWeight: FontWeight.bold)),
-                Icon(icon, color: color),
-              ],
-            ),
-            const SizedBox(height: 16),
-            Text(value, style: TextStyle(color: color, fontSize: 36, fontWeight: FontWeight.bold)),
-          ],
-        ),
+    );
+  }
+}
+
+class _LiveChargerGrid extends StatelessWidget {
+  final List<Map<String, dynamic>> chargers;
+
+  const _LiveChargerGrid({required this.chargers});
+
+  @override
+  Widget build(BuildContext context) {
+    return VendorSectionCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text('Live Charger Health', style: TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.w800)),
+          const SizedBox(height: 18),
+          GridView.builder(
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            itemCount: chargers.length,
+            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(crossAxisCount: 2, crossAxisSpacing: 14, mainAxisSpacing: 14, childAspectRatio: 2.7),
+            itemBuilder: (context, index) {
+              final charger = chargers[index];
+              return Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(color: const Color(0xFF101010), borderRadius: BorderRadius.circular(8), border: Border.all(color: vendorBorder)),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Expanded(child: Text(charger['charger_id'] ?? '-', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w800))),
+                        VendorStatusPill(status: charger['status'] ?? 'Unknown'),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    Text(charger['station_name'] ?? '-', style: const TextStyle(color: vendorMuted, fontSize: 12), overflow: TextOverflow.ellipsis),
+                    const Spacer(),
+                    LinearProgressIndicator(
+                      value: ((double.tryParse(charger['current_kw_output']?.toString() ?? '0') ?? 0) / (double.tryParse(charger['max_kw_output']?.toString() ?? '1') ?? 1)).clamp(0, 1).toDouble(),
+                      color: vendorMint,
+                      backgroundColor: vendorBorder,
+                    ),
+                  ],
+                ),
+              );
+            },
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _WalletAndActivity extends StatelessWidget {
+  final Map<String, dynamic> wallet;
+  final List<String> activity;
+
+  const _WalletAndActivity({required this.wallet, required this.activity});
+
+  @override
+  Widget build(BuildContext context) {
+    return VendorSectionCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text('Vendor Wallet', style: TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.w800)),
+          const SizedBox(height: 16),
+          _walletLine('Available', money(wallet['available_balance']), vendorMint),
+          _walletLine('Pending settlement', money(wallet['pending_balance']), Colors.amber),
+          _walletLine('UPI refunds', money(wallet['refunded_total']), Colors.blueAccent),
+          const SizedBox(height: 24),
+          const Text('Workflow Feed', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w800)),
+          const SizedBox(height: 12),
+          ...activity.take(4).map((item) => Padding(
+                padding: const EdgeInsets.only(bottom: 12),
+                child: Row(children: [
+                  const Icon(Icons.circle, color: vendorMint, size: 8),
+                  const SizedBox(width: 10),
+                  Expanded(child: Text(item, style: const TextStyle(color: vendorMuted, fontSize: 13))),
+                ]),
+              )),
+        ],
       ),
     );
   }
 
-  Widget _buildChartCard(String title, Widget chart, Color color) {
-    return Container(
-      height: 350,
-      padding: const EdgeInsets.all(32),
-      decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.surface,
-        borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: const Color(0xFF2A2A2A)),
-      ),
+  Widget _walletLine(String label, String value, Color color) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
+        Text(label, style: const TextStyle(color: vendorMuted)),
+        Text(value, style: TextStyle(color: color, fontWeight: FontWeight.w800)),
+      ]),
+    );
+  }
+}
+
+class _ActiveSessionPreview extends StatelessWidget {
+  final List<Map<String, dynamic>> sessions;
+  final VoidCallback onOpen;
+
+  const _ActiveSessionPreview({required this.sessions, required this.onOpen});
+
+  @override
+  Widget build(BuildContext context) {
+    final active = sessions.where((session) => session['status'] == 'Active').toList();
+    return VendorSectionCard(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text(title, style: const TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold)),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                decoration: BoxDecoration(color: color.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(50)),
-                child: Text('Last 7 Days', style: TextStyle(color: color, fontSize: 12, fontWeight: FontWeight.bold)),
-              )
+              const Text('Active Charging Sessions', style: TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.w800)),
+              TextButton(onPressed: onOpen, child: const Text('View all sessions', style: TextStyle(color: vendorMint))),
             ],
           ),
-          const SizedBox(height: 32),
-          Expanded(child: chart),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildRevenueChart() {
-    return LineChart(
-      LineChartData(
-        gridData: FlGridData(show: true, drawVerticalLine: false, getDrawingHorizontalLine: (value) => FlLine(color: const Color(0xFF2A2A2A), strokeWidth: 1)),
-        titlesData: FlTitlesData(
-          leftTitles: AxisTitles(sideTitles: SideTitles(showTitles: true, reservedSize: 40, getTitlesWidget: (value, meta) => Text('\$${value.toInt()}', style: const TextStyle(color: Color(0xFF8A8A8A), fontSize: 12)))),
-          bottomTitles: AxisTitles(sideTitles: SideTitles(showTitles: true, getTitlesWidget: (value, meta) {
-            const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
-            if (value.toInt() >= 0 && value.toInt() < days.length) {
-              return Padding(padding: const EdgeInsets.only(top: 8.0), child: Text(days[value.toInt()], style: const TextStyle(color: Color(0xFF8A8A8A), fontSize: 12)));
-            }
-            return const SizedBox();
-          })),
-          rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-          topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-        ),
-        borderData: FlBorderData(show: false),
-        minX: 0, maxX: 6, minY: 0, maxY: 1000,
-        lineBarsData: [
-          LineChartBarData(
-            spots: const [
-              FlSpot(0, 300), FlSpot(1, 450), FlSpot(2, 380),
-              FlSpot(3, 550), FlSpot(4, 700), FlSpot(5, 600), FlSpot(6, 820),
-            ],
-            isCurved: true,
-            color: const Color(0xFF4ADDA2),
-            barWidth: 4,
-            isStrokeCapRound: true,
-            dotData: const FlDotData(show: false),
-            belowBarData: BarAreaData(
-              show: true,
-              gradient: LinearGradient(colors: [const Color(0xFF4ADDA2).withValues(alpha: 0.3), Colors.transparent], begin: Alignment.topCenter, end: Alignment.bottomCenter),
-            ),
-          ),
+          const SizedBox(height: 12),
+          if (active.isEmpty)
+            const Text('No active sessions right now.', style: TextStyle(color: vendorMuted))
+          else
+            ...active.take(3).map((session) => ListTile(
+                  contentPadding: EdgeInsets.zero,
+                  leading: const Icon(Icons.ev_station, color: vendorMint),
+                  title: Text('${session['session_id']} / ${session['charger_id']}', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w700)),
+                  subtitle: Text('${session['kwh_delivered']} kWh / SOC ${session['soc_percent']}% / ${money(session['total_cost'])}', style: const TextStyle(color: vendorMuted)),
+                  trailing: VendorStatusPill(status: session['status']),
+                )),
         ],
       ),
     );

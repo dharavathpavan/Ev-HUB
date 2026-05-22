@@ -3,6 +3,7 @@ import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'package:qr_flutter/qr_flutter.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:cms_frontend/config.dart';
 
 class VendorOnboardingWizard extends StatefulWidget {
   const VendorOnboardingWizard({super.key});
@@ -61,17 +62,42 @@ class _VendorOnboardingWizardState extends State<VendorOnboardingWizard> {
 
   Future<void> _fetchApplications() async {
     try {
-      final response = await http.get(Uri.parse('http://localhost:3003/api/vendors/apply'));
+      final response = await http.get(Uri.parse('${Config.apiBaseUrl}/api/vendors/apply'));
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
         if (mounted) {
           setState(() {
             _applications = data['applications'] ?? [];
+            _prefillUserApplication();
           });
         }
       }
     } catch (e) {
       debugPrint('Error fetching applications: $e');
+    }
+  }
+
+  void _prefillUserApplication() {
+    final currentUserEmail = Supabase.instance.client.auth.currentUser?.email;
+    if (currentUserEmail != null && currentUserEmail.isNotEmpty) {
+      // Try to find if there is an application for the current user email
+      final userApp = _applications.firstWhere(
+        (app) => app['contact_email'] == currentUserEmail,
+        orElse: () => null,
+      );
+      if (userApp != null) {
+        _businessNameController.text = userApp['business_name'] ?? '';
+        _contactEmailController.text = userApp['contact_email'] ?? '';
+        _taxIdController.text = userApp['tax_id'] ?? '';
+        _estimatedChargersController.text = (userApp['estimated_chargers'] ?? 0).toString();
+        _createdVendorId = userApp['vendor_id'] ?? 'vendor-phoenix';
+
+        if (userApp['status'] == 'Approved') {
+          _currentStep = 1; // Auto-advance to Hub deployment!
+        }
+      } else {
+        _contactEmailController.text = currentUserEmail;
+      }
     }
   }
 
@@ -95,7 +121,7 @@ class _VendorOnboardingWizardState extends State<VendorOnboardingWizard> {
     setState(() => _isLoading = true);
     try {
       final response = await http.post(
-        Uri.parse('http://localhost:3003/api/vendors/apply'),
+        Uri.parse('${Config.apiBaseUrl}/api/vendors/apply'),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({
           'business_name': _businessNameController.text,
@@ -127,7 +153,7 @@ class _VendorOnboardingWizardState extends State<VendorOnboardingWizard> {
     setState(() => _isLoading = true);
     try {
       final response = await http.post(
-        Uri.parse('http://localhost:3003/api/vendors/action'),
+        Uri.parse('${Config.apiBaseUrl}/api/vendors/action'),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({
           'id': id,
@@ -261,7 +287,7 @@ class _VendorOnboardingWizardState extends State<VendorOnboardingWizard> {
       
       for (final gun in _configuredGuns) {
         await http.post(
-          Uri.parse('http://localhost:3003/api/chargers/guns'),
+          Uri.parse('${Config.apiBaseUrl}/api/chargers/guns'),
           headers: {'Content-Type': 'application/json'},
           body: jsonEncode({
             'charger_id': chargerId,
@@ -303,7 +329,7 @@ class _VendorOnboardingWizardState extends State<VendorOnboardingWizard> {
         final qrId = 'QR-${chargerId}-G${gunIdx}';
         
         final response = await http.post(
-          Uri.parse('http://localhost:3003/api/qr/map'),
+          Uri.parse('${Config.apiBaseUrl}/api/qr/map'),
           headers: {'Content-Type': 'application/json'},
           body: jsonEncode({
             'qr_id': qrId,
@@ -964,7 +990,7 @@ class _VendorOnboardingWizardState extends State<VendorOnboardingWizard> {
     setState(() => _isLoading = true);
     try {
       final response = await http.post(
-        Uri.parse('http://localhost:3003/api/payments/qr-initiate'),
+        Uri.parse('${Config.apiBaseUrl}/api/payments/qr-initiate'),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({
           'qr_id': qrId,
